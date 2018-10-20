@@ -1,0 +1,14 @@
+# Scatter <> Tron Boilerplate
+
+Clone this repository and then `cd` into it.
+
+### Pre-requisites
+
+- **You will need `vue-cli` to run this.**
+- If you don't have it simply do `npm i -g vue-cli` in your console.
+
+### Running
+
+- `npm i`
+- `npm start`
+- Check the console for the URL to navigate to in your browser.
