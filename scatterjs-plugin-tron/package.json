@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "scatterjs-core": "^2.3.7",
-    "scatterjs-plugin-tron": "^1.1.8",
+    "scatterjs-plugin-tron": "^1.1.9",
     "tronweb": "^2.0.17",
     "vue": "^2.5.17",
     "vue-router": "^3.0.1",

@@ -5588,9 +5588,9 @@ scatterjs-core@^2.3.7:
     es6-promise "^4.2.4"
     get-random-values "^1.2.0"
 
-scatterjs-plugin-tron@^1.1.8:
-  version "1.1.8"
-  resolved "https://registry.yarnpkg.com/scatterjs-plugin-tron/-/scatterjs-plugin-tron-1.1.8.tgz#53ac6d6f9b7f8a19961478df424fb2def8e0a813"
+scatterjs-plugin-tron@^1.1.9:
+  version "1.1.9"
+  resolved "https://registry.yarnpkg.com/scatterjs-plugin-tron/-/scatterjs-plugin-tron-1.1.9.tgz#ba0eaf43a8fd5c76f64c45e4bb0b3ecbba018f2f"
 
 schema-utils@^0.4.0, schema-utils@^0.4.2, schema-utils@^0.4.4, schema-utils@^0.4.5:
   version "0.4.7"

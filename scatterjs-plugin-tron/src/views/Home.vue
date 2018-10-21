@@ -39,8 +39,11 @@
         <br>
 
         <section v-if="scatter && address">
-          <input v-model="messageToPost" />
-          <button @click="postMessage">{{posting ? 'Posting' : 'Post'}}</button>
+          <input :disabled="posting" v-model="messageToPost" />
+          <button @click="postMessage">
+            <span v-if="!posting">Post</span>
+            <i class="fa fa-spinner fa-spin" v-if="posting"></i>
+          </button>
 
           <section v-if="result">
             <br>
@@ -58,6 +61,15 @@
           You need Scatter to interact with this website.
           <a href="https://get-scatter.com/" target="_blank">Click here to get it.</a>
         </section>
+      </section>
+
+      <section class="messages">
+        <h1>Messages</h1>
+        <figure class="message" v-for="msg in recent">
+          <figure class="col">{{(new Date(msg.timestamp*1000)).toLocaleString()}}</figure>
+          <figure class="col">{{msg.owner.substr(0,4)}}...{{msg.owner.slice(-5)}}</figure>
+          <figure class="col">{{msg.message}}</figure>
+        </figure>
       </section>
     </section>
 
@@ -106,7 +118,9 @@
             tron:null,
             contract:null,
             result:null,
-            messageToPost:''
+            messageToPost:'',
+
+            recent:[],
         }},
 
         mounted(){
@@ -114,6 +128,7 @@
             const httpProvider = new TronWeb.providers.HttpProvider(network.fullhost());
             this.tron = new TronWeb(httpProvider, httpProvider, network.fullhost());
             this.tron.setDefaultBlock('latest');
+            this.contract = this.tron.contract(contractData.abi, contractData.address);
 
 
             // Let's try connecting to Scatter first to make sure the user has Scatter installed.
@@ -131,8 +146,9 @@
                 // Since we have a user with Scatter we're going to overwrite the tronweb instance
                 // with one that can sign transactions with Scatter.
                 this.tron = this.scatter.trx(network, this.tron);
-                // Let's also cache a reference to our contract.
+                // YOU MUST ALSO RESET THE CONTRACT REFERENCE NOW!
                 this.contract = this.tron.contract(contractData.abi, contractData.address);
+                this.fetchMessages();
             })
         },
 
@@ -179,12 +195,43 @@
                 }).then(res => {
                     this.posting = false;
                     this.result = `Success ${res}`
+                    this.fetchMessages();
                 })
                 .catch(res => {
                     this.posting = false;
                     const err = typeof res === 'string' ? res : res.message;
                     this.result = `Error: ${err}`
                 });
+            },
+
+
+            // Taken from the TronWatch project: https://github.com/TronWatch/TronLink-Demo-Messages/blob/master/src/utils/index.js
+            async fetchMessages(recent = {}){
+
+                // Fetch Max(30) most recent messages
+                const totalMessages = (await this.contract.current().call()).toNumber();
+                const min = Math.max(1, totalMessages - 30);
+
+                const messageIDs = [ ...new Set([
+                    ...new Array(totalMessages - min).fill().map((_, index) => min + index)
+                ])];
+
+                await Promise.all(messageIDs.reverse().map(messageID => (
+                    this.contract.messages(messageID).call()
+                ))).then(messages => messages.forEach((message, index) => {
+                    const messageID = +messageIDs[index];
+                    recent[messageID] = this.transformMessage(message);
+                }));
+
+                recent = Object.keys(recent).map(key => recent[key])
+                this.recent = recent.sort((a,b) => b.timestamp - a.timestamp);
+            },
+            transformMessage(message) {
+                return {
+                    owner: this.tron.address.fromHex(message.creator),
+                    timestamp: message.time.toNumber(),
+                    message: message.message
+                }
             }
         }
     }
@@ -198,18 +245,34 @@
   }
 
   .example {
-    display:flex;
-    justify-content: center;
-    align-items: center;
     min-height: 100vh;
     width:100%;
 
     .container {
+      margin:100px auto;
       text-align:center;
+      display:inline-block;
     }
 
     .contract {
       max-width:600px;
+      margin:0 auto 100px;
+    }
+
+    .messages {
+      width:100%;
+
+      .message {
+        width:100%;
+        display:flex;
+        border-bottom:1px solid rgba(0,0,0,0.1);
+        padding:10px 20px;
+        text-align:left;
+
+        .col {
+          flex:1;
+        }
+      }
     }
 
     h1 {
@@ -224,7 +287,7 @@
     }
 
     .logged-in-with {
-      position: fixed;
+      position: absolute;
       top:20px;
       left:0;
       right:0;
