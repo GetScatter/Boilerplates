@@ -3,7 +3,7 @@
 Clone this repository and then `cd` into it.
 
 ### Logic File: 
-[Home.vue](https://github.com/nsjames/Boilerplates/blob/master/scatterjs-plugin-tron/src/views/Home.vue) is where the entire logic sits for this boilerplate.
+[Home.vue](https://github.com/GetScatter/Boilerplates/blob/master/scatterjs-plugin-tron/src/views/Home.vue) is where the entire logic sits for this boilerplate.
 
 ### Pre-requisites
 
