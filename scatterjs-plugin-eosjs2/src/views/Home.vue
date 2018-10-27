@@ -44,12 +44,6 @@
             <i class="fa fa-spinner fa-spin" v-if="sending"></i>
           </button>
 
-          <br>
-          <br>
-          <button class="small" :class="{'grey':transferType !== 'builtin'}" @click="transferType = 'builtin'">Builtin Transfer</button>
-          <button class="small" :class="{'grey':transferType !== 'contract'}" @click="transferType = 'contract'">Contract Transfer</button>
-          <button class="small" :class="{'grey':transferType !== 'transaction'}" @click="transferType = 'transaction'">Transaction Transfer</button>
-
           <section v-if="result">
             <br>
             {{result}}
@@ -78,8 +72,8 @@
 
     // Importing Scatter and eosjs.
     import ScatterJS, {Network} from 'scatterjs-core';
-    import ScatterEOS from 'scatterjs-plugin-eosjs';
-    import Eos from 'eosjs';
+    import ScatterEOS from 'scatterjs-plugin-eosjs2';
+    import { Api, JsonRpc, RpcError, JsSignatureProvider } from 'eosjs';
 
 
     // Scatter comes without plugins, so we need to add the eosjs plugin.
@@ -105,13 +99,14 @@
     // but you CAN set it as a VUEX state property if you wanted.
     let eos;
 
+    const rpc = new JsonRpc(network.fullhost());
+
     export default {
 
         data(){return {
             sending:false,
             scatter:null,
             result:null,
-            transferType:'builtin'
         }},
 
         mounted(){
@@ -162,7 +157,7 @@
                 // https://get-scatter.com/docs/api-forget-identity
                 this.scatter.forgetIdentity();
             },
-            transferFunds(){
+            async transferFunds(){
                 if(this.sending) return;
                 this.sending = true;
                 // You need to pass in options, to make sure eosjs knows which authority/permission to use.
@@ -175,42 +170,45 @@
                     this.sending = false;
                 }
 
-                // There's three different ways you can call the transfer method.
                 // NOTE: The `safetransfer` contract will just circle the funds back to you if you set the 'memo' parameter to the sender.
 
-                if(this.transferType === 'builtin'){
-                    // Using the built-in transfer method.
-                    eos.transfer(this.account.name, 'safetransfer', '1.0000 EOS', this.account.name, options)
-                        .then(completed).catch(completed)
+                try {
+                    const result = await eos.transact({
+                        actions: [{
+                            account: 'eosio.token',
+                            name: 'transfer',
+                            authorization: [{
+                                actor: this.account.name,
+                                permission: this.account.authority,
+                            }],
+                            data: {
+                                from: this.account.name,
+                                to: 'safetransfer',
+                                quantity: '0.0001 EOS',
+                                memo: this.account.name,
+                            },
+                        }]
+                    }, {
+                        blocksBehind: 3,
+                        expireSeconds: 30,
+                    });
+                    completed(result);
+                } catch (e) {
+                    completed(e);
                 }
 
-                if(this.transferType === 'contract'){
-                    // Using the contract method ( will work for your own contracts )
-                    eos.contract('eosio.token').then(contract => {
-                        contract.transfer(this.account.name, 'safetransfer', '1.0000 EOS', this.account.name, options)
-                            .then(completed).catch(completed);
-                    })
-                }
-
-                if(this.transferType === 'transaction'){
-                    // Using the `transaction` method, if any of these fails, all of them will fail.
-                    eos.transaction(['eosio.token'], contracts => {
-                        contracts.eosio_token.transfer(this.account.name, 'safetransfer', '1.0000 EOS', this.account.name, options);
-                        contracts.eosio_token.transfer(this.account.name, 'safetransfer', '2.0000 EOS', this.account.name, options);
-                    }, options).then(completed).catch(completed)
-                }
             },
-
 
             setEosInstance(){
                 if(this.account){
                     // Since we have a user with Scatter we're going to overwrite the eosjs instance
                     // with one that can sign transactions with Scatter.
-                    eos = this.scatter.eos(network, Eos);
+
+                    eos = this.scatter.eos(network, Api, {rpc});
                 } else {
                     // There is no user, so we're using a fallback eosjs instance so we can still fetch things
                     // from chain.
-                    eos = Eos({httpEndpoint:network.fullhost()});
+                    eos = new Api({ rpc });
                 }
             },
         },
